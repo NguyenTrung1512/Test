@@ -248,43 +248,213 @@ select SOHD,TRIGIA from HOADON where (NGHD in ('01/01/2007', '02/01/2007'))
 -- Câu 7 --
 select SOHD, TRIGIA from HOADON where (YEAR(NGHD) = 2007 and MONTH(NGHD) = 1) order by NGHD , TRIGIA DESC
 
-SET DATEFORMAT DMY
-select * 
-FROM HOADON LEFT JOIN KHACHHANG
-ON HOADON.MAKH = KHACHHANG.MAKH
+	
+-- Câu 8 --
+SELECT KH.MAKH, KH.HOTEN
+FROM KHACHHANG KH JOIN HOADON HD
+ON KH.MAKH = HD.MAKH 
+WHERE HD.NGHD = '01/01/2007'
 
--- Phần III --
+-- Câu 9 --
+-- In ra số hóa đơn, trị giá các hóa đơn do nhân viên có tên “Nguyen Van B” lập trong ngày 28/10/2006
+SELECT HD.SOHD,	HD.TRIGIA
+FROM HOADON HD JOIN NHANVIEN NV
+ON NV.MANV = HD.MANV
+WHERE NV.HOTEN = 'Nguyen Van B' AND HD.NGHD = '28/10/2006'
+
+-- Câu 10 --
+-- In ra danh sách các sản phẩm (MASP,TENSP) được khách hàng có tên “Nguyen Van A” mua trong tháng 10/2006.
+SELECT SP.MASP, SP.TENSP
+FROM SANPHAM SP JOIN CTHD
+ON SP.MASP = CTHD.MASP
+WHERE CTHD.SOHD IN (SELECT SOHD 
+					FROM HOADON JOIN KHACHHANG 
+					ON HOADON.MAKH = KHACHHANG.MAKH
+					WHERE YEAR(HOADON.NGHD) = 2006 
+						  AND MONTH(HOADON.NGHD) = 10 
+						  AND KHACHHANG.HOTEN = 'Nguyen Van A')
+
+
+-- Câu 11 --
+-- Tìm các số hóa đơn đã mua sản phẩm có mã số “BB01” hoặc “BB02”.
+SELECT SOHD
+FROM CTHD 
+WHERE CTHD.MASP = 'BB01' OR CTHD.MASP = 'BB02' 
+
+
+-- Câu 12 --
+-- Tìm các số hóa đơn đã mua sản phẩm có mã số “BB01” hoặc “BB02”, mỗi sản phẩm mua với số lượng từ 10 đến 20.
+SELECT SOHD
+FROM CTHD 
+WHERE (CTHD.MASP = 'BB01' OR CTHD.MASP = 'BB02') AND (CTHD.SL BETWEEN 10 AND 20)
+
+
+-- Câu 13 --
+-- Tìm các số hóa đơn mua cùng lúc 2 sản phẩm có mã số “BB01” và “BB02”, mỗi sản phẩm mua với số lượng từ 10 đến 20.
+SELECT SOHD 
+FROM CTHD 
+WHERE CTHD.SL BETWEEN 10 AND 20 
+	  AND CTHD.MASP = 'BB01' 
+	  INTERSECT 
+	  (
+		SELECT SOHD 
+		FROM CTHD 
+		WHERE CTHD.MASP = 'BB02'
+	  )
+										
 
 -- Câu 14 --
-SELECT MASP, TENSP
-FROM SANPHAM 
-WHERE NUOCSX = 'Trung Quoc'
-UNION 
-SELECT MASP, TENSP
-FROM SANPHAM, HOADON, CTHD
-WHERE HOADON.NGHD = '01/01/2007'
-
-SELECT SANPHAM.MASP, TENSP
-FROM SANPHAM JOIN CTHD ON CTHD.MASP = SANPHAM.MASP JOIN HOADON ON CTHD.SOHD = HOADON.SOHD
-WHERE NUOCSX = 'Trung Quoc' OR NGHD = '1/1/2007'
+-- In ra danh sách các sản phẩm (MASP,TENSP) do “Trung Quoc” sản xuất hoặc các sản phẩm được bán ra trong ngày 1/1/2007.
+SELECT DISTINCT SP.MASP, SP.TENSP
+FROM SANPHAM SP JOIN CTHD 
+ON SP.MASP = CTHD.MASP
+WHERE SP.NUOCSX = 'Trung Quoc' OR CTHD.SOHD IN (SELECT SOHD	
+												 FROM HOADON 
+												 WHERE NGHD = '01/01/2007')
 
 
-A : CTHD
-B : HOADON
-C : SANPHAM
-SELECT *
-FROM SANPHAM 
-WHERE NOT EXISTS (SELECT *
+-- Câu 15 --
+-- In ra danh sách các sản phẩm (MASP,TENSP) không bán được
+SELECT DISTINCT SP.MASP, SP.TENSP
+FROM SANPHAM SP
+WHERE SP.MASP NOT IN(SELECT DISTINCT MASP
+					 FROM CTHD)
+
+
+-- Câu 16 -- 
+-- In ra danh sách các sản phẩm (MASP,TENSP) không bán được trong năm 2006
+SELECT DISTINCT SP.MASP, SP.TENSP
+FROM SANPHAM SP
+WHERE SP.MASP NOT IN(SELECT DISTINCT CTHD.MASP
+					 FROM CTHD JOIN HOADON HD
+					 ON CTHD.SOHD = HD.SOHD
+					 WHERE YEAR(HD.NGHD) = 2006)
+
+
+-- Câu 17 --
+-- In ra danh sách các sản phẩm (MASP,TENSP) do “Trung Quoc” sản xuất không bán được trong năm 2006.
+SELECT DISTINCT SP.MASP, SP.TENSP
+FROM SANPHAM SP
+WHERE SP.NUOCSX = 'Trung Quoc' AND SP.MASP NOT IN(SELECT DISTINCT CTHD.MASP
+												  FROM CTHD JOIN HOADON HD
+												  ON CTHD.SOHD = HD.SOHD
+												  WHERE YEAR(HD.NGHD) = 2006)
+
+-- Câu 18 -- 
+-- Tìm số hóa đơn đã mua tất cả các sản phẩm do Singapore sản xuất.
+/* 
+A : B = C
+A = CTHD
+B =	SANPHAM
+C = HOADON
+*/
+
+SELECT HD.SOHD
+FROM HOADON HD
+WHERE NOT EXISTS ( 
+					SELECT * 
+					FROM SANPHAM SP
+					WHERE NOT EXISTS (
+										SELECT *	
+										FROM CTHD
+										WHERE CTHD.MASP = SP.MASP AND HD.SOHD = CTHD.SOHD 
+									)
+				)
+
+-- Câu 19 --
+-- Tìm số hóa đơn trong năm 2006 đã mua ít nhất tất cả các sản phẩm do Singapore sản xuất
+
+
+-- Câu 20
+-- Có bao nhiêu hóa đơn không phải của khách hàng đăng ký thành viên mua?
+SELECT * FROM HOADON
+SELECT COUNT(*) SL
+FROM HOADON 
+WHERE HOADON.MAKH IS NULL
+
+
+-- Câu 21 --
+-- Có bao nhiêu sản phẩm khác nhau được bán ra trong năm 2006
+SELECT COUNT(*) SL
+FROM HOADON HD JOIN CTHD 
+ON HD.SOHD = CTHD.SOHD
+WHERE YEAR(HD.NGHD) = 2006
+
+
+-- Câu 22 
+-- Cho biết trị giá hóa đơn cao nhất, thấp nhất là bao nhiêu ?
+SELECT MAX(TRIGIA) 'CAO NHAT', MIN(TRIGIA) 'THAP NHAT'
+FROM HOADON HD
+
+
+-- Câu 23
+-- Trị giá trung bình của tất cả các hóa đơn được bán ra trong năm 2006 là bao nhiêu?
+SELECT AVG(TRIGIA) 'TRUNG BINH'
+FROM HOADON 
+WHERE YEAR(HOADON.NGHD) = 2006
+
+
+
+-- Câu 24 
+-- Tính doanh thu bán hàng trong năm 2006
+SELECT SUM(TRIGIA) 'DOANH THU'
 FROM HOADON
-WHERE NOT EXISTS (SELECT *
-FROM CTHD 
-WHERE SANPHAM.MASP = CTHD.MASP AND HOADON.SOHD = CTHD.SOHD
+WHERE YEAR(HOADON.NGHD) = 2006
 
 
-SELECT *
-FROM CHITIET 
-WHERE NOT EXISTS (SELECT MACC
-FROM NHACC 
-WHERE TENCC = 'Vina' AND NOT EXISTS (SELECT MADH, MACC
-FROM DONDH 
-WHERE CHITIET.MADH = DONDH.MADH AND NHACC.MACC = DONDH.MACC
+-- Câu 25 
+-- Tìm số hóa đơn có trị giá cao nhất trong năm 2006
+SELECT HD.SOHD
+FROM HOADON HD
+WHERE YEAR(HD.NGHD) = 2006 AND HD.TRIGIA >= ALL ( 
+												 SELECT MAX(TRIGIA)
+												 FROM HOADON 
+												 WHERE YEAR(HOADON.NGHD) = 2006
+												)
+
+-- cách 2 
+SELECT TOP 1 WITH TIES HD.SOHD
+FROM HOADON HD	
+WHERE YEAR(HD.NGHD) = 2006 
+ORDER BY HD.TRIGIA DESC
+
+-- cách 3
+SELECT HD.SOHD
+FROM HOADON HD
+WHERE YEAR(HD.NGHD) = 2006 AND HD.TRIGIA = (
+											SELECT MAX(TRIGIA)
+											FROM HOADON
+											WHERE YEAR(HOADON.NGHD) = 2006
+										   )
+
+-- Câu 26
+-- Tìm họ tên khách hàng đã mua hóa đơn có trị giá cao nhất trong năm 2006
+SELECT KH.HOTEN
+FROM KHACHHANG KH RIGHT JOIN HOADON HD
+ON KH.MAKH = HD.MAKH 
+WHERE YEAR(HD.NGHD) = 2006 AND HD.TRIGIA >= ALL (
+												  SELECT MAX(HOADON.TRIGIA)
+												  FROM HOADON 
+												  WHERE YEAR(NGHD) = 2006
+												)
+
+
+-- Câu 27
+-- In ra danh sách 3 khách hàng (MAKH, HOTEN) có doanh số cao nhất.
+SELECT TOP 3 MAKH, HOTEN
+FROM KHACHHANG 
+ORDER BY DOANHSO DESC
+
+-- Câu 28
+-- In ra danh sách các sản phẩm (MASP, TENSP) có giá bán bằng 1 trong 3 mức giá cao nhất
+SELECT SP.MASP, SP.TENSP
+FROM SANPHAM SP
+WHERE SP.GIA IN (	
+				  SELECT TOP 3 GIA
+				  FROM SANPHAM
+				  ORDER BY GIA DESC 
+				)
+
+
+-- Câu 29
+-- 
