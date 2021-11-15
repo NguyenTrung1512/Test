@@ -335,3 +335,251 @@ CASE
 	WHEN DIEMTB < 5 THEN 'Y'
 END
 )
+
+	
+-- PHẦN III --
+-- Câu 1 --
+-- In ra danh sách (mã học viên, họ tên, ngày sinh, mã lớp) lớp trưởng của các lớp
+
+SELECT MAHV, HO + ' ' + TEN AS HOTEN, NGSINH, MALOP
+FROM HOCVIEN 
+WHERE MAHV IN (
+			   SELECT TRGLOP
+			   FROM LOP
+			  )
+
+-- Câu 2 --
+-- In ra bảng điểm khi thi (mã học viên, họ tên , lần thi, điểm số) môn CTRR của lớp “K12”, sắp xếp theo tên, họ học viên
+SELECT HV.MAHV, HO + ' ' + TEN AS HOTEN, LANTHI, DIEM
+FROM HOCVIEN HV JOIN KETQUATHI KQ
+ON HV.MAHV = KQ.MAHV
+WHERE HV.MALOP = 'K12' AND KQ.MAMH = 'CTRR'
+ORDER BY HV.TEN, HV.HO
+
+
+-- Câu 3 --
+-- In ra danh sách những học viên (mã học viên, họ tên) và những môn học mà học viên đó thi lần thứ nhất đã đạt	
+SELECT HV.MAHV, HO + ' ' + TEN AS HOTEN, KQ.MAMH
+FROM HOCVIEN HV JOIN KETQUATHI KQ
+ON HV.MAHV = KQ.MAHV
+WHERE KQ.LANTHI = 1 AND KQ.KQUA = 'Dat'
+
+-- cách 2 --
+SELECT HV.MAHV, HO + ' ' + TEN AS HOTEN, MH.TENMH
+FROM HOCVIEN HV, KETQUATHI KQ, MONHOC MH
+WHERE HV.MAHV = KQ.MAHV 
+	  AND KQ.MAMH = MH.MAMH 
+	  AND KQ.LANTHI = 1
+	  AND KQ.KQUA = 'Dat'
+
+
+-- Câu 4 --
+-- In ra danh sách học viên (mã học viên, họ tên) của lớp “K11” thi môn CTRR không đạt (ở lần thi 1).
+SELECT HV.MAHV, HO + ' ' + TEN AS HOTEN
+FROM HOCVIEN HV JOIN KETQUATHI KQ
+ON HV.MAHV = KQ.MAHV
+WHERE HV.MALOP = 'K11' 
+	  AND KQ.MAMH = 'CTRR'
+	  AND KQ.LANTHI = 1
+	  AND KQ.KQUA = 'Khong Dat'
+
+
+-- Câu 5 --
+-- * Danh sách học viên (mã học viên, họ tên) của lớp “K” thi môn CTRR không đạt (ở tất cả các lần thi)
+SELECT DISTINCT HV.MAHV, HO + ' ' + TEN AS HOTEN 
+FROM HOCVIEN HV JOIN KETQUATHI KQ
+ON HV.MAHV = KQ.MAHV
+WHERE HV.MALOP LIKE 'K%' 
+	  AND MAMH = 'CTRR'
+	  AND NOT EXISTS (
+					 	SELECT *
+						FROM KETQUATHI 
+						WHERE KQUA = 'Dat' AND HV.MAHV = KETQUATHI.MAMH AND MAMH = 'CTRR'
+					 )		 
+
+
+-- Câu 6 --
+-- Tìm tên những môn học mà giáo viên có tên “Tran Tam Thanh” dạy trong học kỳ 1 năm 2006
+SELECT DISTINCT MH.TENMH 
+FROM MONHOC MH JOIN GIANGDAY GD
+ON MH.MAMH = GD.MAMH
+WHERE GD.HOCKY = 1 
+	  AND GD.NAM = 2006
+	  AND GD.MAGV in (SELECT MAGV FROM GIAOVIEN WHERE GIAOVIEN.HOTEN = 'Tran Tam Thanh')
+
+
+-- Câu 7 --
+-- Tìm những môn học (mã môn học, tên môn học) mà giáo viên chủ nhiệm lớp “K11” dạy trong học kỳ 1 năm 2006
+SELECT DISTINCT MH.MAMH, MH.TENMH
+FROM MONHOC MH JOIN GIANGDAY GD
+ON MH.MAMH = GD.MAMH
+WHERE GD.HOCKY = 1
+	  AND GD.NAM = 2006
+	  AND GD.MAGV = (SELECT MAGV FROM LOP WHERE MALOP = 'K11')
+
+
+-- Câu 8 --
+-- Tìm họ tên lớp trưởng của các lớp mà giáo viên có tên “Nguyen To Lan” dạy môn “Co So Du Lieu”
+SELECT HO + ' ' + TEN AS HOTEN 
+FROM HOCVIEN HV JOIN LOP
+ON HV.MAHV = LOP.TRGLOP
+WHERE HV.MALOP = ( SELECT GD.MALOP 
+				   FROM GIANGDAY GD JOIN MONHOC MH
+				   ON GD.MAMH = MH.MAMH 
+				   WHERE MH.TENMH = 'Co So Du Lieu' AND GD.MAGV = ( 
+																	SELECT MAGV
+																	FROM GIAOVIEN GV
+																	WHERE GV.HOTEN = 'Nguyen To Lan'
+																  ))	
+
+-- Câu 9 --
+-- In ra danh sách những môn học (mã môn học, tên môn học) phải học liền trước môn “Co So Du Lieu”
+SELECT MAMH, TENMH
+FROM MONHOC
+WHERE MAMH IN (
+				SELECT DK.MAMH_TRUOC
+				FROM MONHOC MH JOIN DIEUKIEN DK
+				ON MH.MAMH = DK.MAMH
+				WHERE MH.TENMH = 'Co So Du Lieu'
+			  )
+
+
+-- Câu 10 --
+-- Môn “Cau Truc Roi Rac” là môn bắt buộc phải học liền trước những môn học (mã môn học, tên môn học) nào
+SELECT MH.MAMH, MH.TENMH
+FROM MONHOC MH 
+WHERE MH.MAMH IN (
+				  SELECT DK.MAMH
+				  FROM MONHOC MH JOIN DIEUKIEN DK
+				  ON MH.MAMH = DK.MAMH_TRUOC
+				  WHERE MH.TENMH = 'Cau truc roi rac'
+				 )
+
+
+-- Câu 11 --
+-- Tìm họ tên giáo viên dạy môn CTRR cho cả hai lớp “K11” và “K12” trong cùng học kỳ 1 năm 2006.
+SELECT GV.HOTEN
+FROM GIAOVIEN GV 
+WHERE GV.MAGV IN (
+				   SELECT GD.MAGV 
+				   FROM GIANGDAY GD 
+				   WHERE GD.HOCKY = 1
+						 AND GD.NAM = 2006
+						 AND GD.MALOP = 'K11' AND MAGV IN ( 
+															SELECT MAGV 
+															FROM GIANGDAY 
+															WHERE MALOP = 'K12'
+														  )
+				)	
+
+-- Câu 12 --
+-- Tìm những học viên (mã học viên, họ tên) thi không đạt môn CSDL ở lần thi thứ 1 nhưng chưa thi lại môn này.
+SELECT DISTINCT HV.MAHV, HO + ' ' + TEN AS HOTEN 
+FROM HOCVIEN HV JOIN KETQUATHI KQ 
+ON HV.MAHV = KQ.MAHV 
+WHERE (
+	   KQ.MAMH = 'CSDL' 
+	   AND KQ.LANTHI = 1 
+	   AND KQ.KQUA = 'Khong Dat') AND NOT EXISTS (
+											       SELECT *
+												   FROM KETQUATHI KQ
+												   WHERE LANTHI > 1 AND KQ.MAHV = HV.MAHV
+												 )
+												 
+-- Câu 13 --
+-- Tìm giáo viên (mã giáo viên, họ tên) không được phân công giảng dạy bất kỳ môn học nào
+SELECT GV.MAGV, GV.HOTEN
+FROM GIAOVIEN GV 
+WHERE GV.MAGV NOT IN (
+					   SELECT MAGV
+					   FROM	GIANGDAY
+					 )
+
+-- Cách 2 --
+SELECT GV.MAGV, GV.HOTEN
+FROM GIAOVIEN GV
+WHERE NOT EXISTS (
+				   SELECT * 
+				   FROM GIANGDAY GD
+				   WHERE GV.MAGV = GD.MAGV
+				 )
+
+
+-- Câu 14 --
+-- Tìm giáo viên (mã giáo viên, họ tên) không được phân công giảng dạy bất kỳ môn học nào thuộc khoa giáo viên đó phụ trách.
+SELECT GV.MAGV, GV.HOTEN
+FROM GIAOVIEN GV
+WHERE NOT EXISTS (
+				   SELECT * 
+				   FROM GIANGDAY GD JOIN MONHOC MH
+				   ON GD.MAMH = MH.MAMH AND GV.MAGV = GD.MAGV
+				   WHERE MH.MAKHOA = GV.MAKHOA
+				 )
+
+
+-- Câu 15 --
+-- Tìm họ tên các học viên thuộc lớp “K11” thi một môn bất kỳ quá 3 lần vẫn “Khong dat” hoặc thi lần thứ 2 môn CTRR được 5 điểm.
+SELECT HO + ' ' + TEN AS HOTEN
+FROM HOCVIEN 
+WHERE MALOP = 'K11' AND 
+					(
+					  EXISTS ( SELECT * FROM KETQUATHI KQ WHERE LANTHI > 3 AND KQUA = 'Khong Dat' AND HOCVIEN.MAHV = KQ.MAHV)
+					  OR 
+					  EXISTS ( SELECT * FROM KETQUATHI KQ WHERE KQ.MAMH = 'CTRR' AND KQ.LANTHI = 2 AND KQ.DIEM = 5 AND HOCVIEN.MAHV = KQ.MAHV)
+					)
+
+
+-- Câu 16 --
+-- Tìm họ tên giáo viên dạy môn CTRR cho ít nhất hai lớp trong cùng một học kỳ của một năm học.
+SELECT GV.HOTEN
+FROM GIAOVIEN GV JOIN GIANGDAY GD
+ON GV.MAGV = GD.MAGV
+WHERE GD.MAMH = 'CTRR'		
+GROUP BY HOTEN, HOCKY, NAM
+HAVING COUNT(*) >= 2
+
+							 
+-- Câu 17 --
+-- Danh sách học viên và điểm thi môn CSDL (chỉ lấy điểm của lần thi sau cùng).
+SELECT HV.* , KQ.DIEM AS 'DIEM THI CUOI CUNG'
+FROM HOCVIEN HV JOIN KETQUATHI KQ
+ON HV.MAHV = KQ.MAHV
+WHERE KQ.MAMH = 'CSDL' AND LANTHI = ( 
+										SELECT MAX(LANTHI)
+										FROM KETQUATHI 
+										WHERE HV.MAHV = KETQUATHI.MAHV AND KETQUATHI.MAMH = 'CSDL'
+										GROUP BY MAHV 
+									)
+
+-- Câu 18 --
+-- Danh sách học viên và điểm thi môn “Co So Du Lieu” (chỉ lấy điểm cao nhất của các lần thi).
+SELECT HV.*, KQ.DIEM AS 'DIEM CAO NHAT'
+FROM HOCVIEN HV JOIN KETQUATHI KQ
+ON HV.MAHV = KQ.MAHV
+WHERE KQ.DIEM = ( 
+					SELECT MAX(DIEM) 
+					FROM KETQUATHI
+					WHERE KETQUATHI.MAHV = HV.MAHV AND KETQUATHI.MAMH = 'CSDL'
+					GROUP BY MAHV
+				)
+	  AND KQ.MAMH = (SELECT MAMH FROM MONHOC WHERE TENMH = 'Co So Du Lieu')
+
+--  Mã nhân viên tham gia nhiều đề án nhất 
+SELECT MaNV
+FROM PHANCONG
+GROUP BY MaNV
+HAVING COUNT(MaDA) >= ALL (
+							SELECT MAX(MaDA)
+							FROM PHANCONG 
+							GROUP BY MaNV
+						  )
+
+-- Mã và tên nhân viên tham gia nhiều đề án nhất 
+SELECT NV.MaNV, HoNV + ' ' + TenDem + ' ' + TenNV
+FROM PHANCONG PC JOIN NHANVIEN NV
+GROUP BY NV.MaNV
+HAVING COUNT(MaDA) >= ALL (
+							SELECT MAX(MaDA)
+							FROM PHANCONG 
+							GROUP BY MaNV
+						  )
