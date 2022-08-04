@@ -1,4 +1,4 @@
-﻿CREATE DATABASE QLHV
+		CREATE DATABASE QLHV
 
 
 CREATE TABLE KHOA 
@@ -564,22 +564,105 @@ WHERE KQ.DIEM = (
 				)
 	  AND KQ.MAMH = (SELECT MAMH FROM MONHOC WHERE TENMH = 'Co So Du Lieu')
 
---  Mã nhân viên tham gia nhiều đề án nhất 
-SELECT MaNV
-FROM PHANCONG
-GROUP BY MaNV
-HAVING COUNT(MaDA) >= ALL (
-							SELECT MAX(MaDA)
-							FROM PHANCONG 
-							GROUP BY MaNV
-						  )
 
--- Mã và tên nhân viên tham gia nhiều đề án nhất 
-SELECT NV.MaNV, HoNV + ' ' + TenDem + ' ' + TenNV
-FROM PHANCONG PC JOIN NHANVIEN NV
-GROUP BY NV.MaNV
-HAVING COUNT(MaDA) >= ALL (
-							SELECT MAX(MaDA)
-							FROM PHANCONG 
-							GROUP BY MaNV
-						  )
+-- Câu 19
+-- Khoa nào (mã khoa, tên khoa) được thành lập sớm nhất 
+SELECT TOP 1 WITH TIES MAKHOA, TENKHOA
+FROM KHOA 
+ORDER BY NGTLAP
+
+
+-- Câu 20 
+--  Có bao nhiêu giáo viên có học hàm là “GS” hoặc “PGS”
+SELECT COUNT(*)
+FROM GIAOVIEN
+WHERE HOCHAM IN ('GS', 'PGS')
+
+
+-- Câu 21
+-- Thống kê có bao nhiêu giáo viên có học vị là “CN”, “KS”, “Ths”, “TS”, “PTS” trong mỗi khoa
+SELECT HOCVI, COUNT(*) AS 'SL'
+FROM GIAOVIEN
+GROUP BY HOCVI
+
+
+-- Câu 22
+-- Mỗi môn học thống kê số lượng học viên theo kết quả (đạt và không đạt)
+SELECT MAMH, KQUA, COUNT(*) AS 'Ket Qua'
+FROM KETQUATHI KQT
+GROUP BY MAMH, KQUA
+ORDER BY MAMH
+
+
+-- Câu 23
+-- giáo viên (mã giáo viên, họ tên) là giáo viên chủ nhiệm của một lớp, đồng thời dạy cho lớp đó ít nhất một môn học
+SELECT GV.MAGV, GV.HOTEN
+FROM GIAOVIEN GV JOIN LOP 
+ON GV.MAGV = LOP.MAGVCN
+WHERE EXISTS (
+	SELECT * 
+	FROM GIANGDAY GD
+	WHERE MALOP = LOP.MALOP AND MAGV = GV.MAGV
+	)
+
+
+-- Câu 24
+-- Tìm họ tên lớp trưởng của lớp có sỉ số cao nhất.
+SELECT TOP 1 HV.HO + ' ' + HV.TEN AS 'HO TEN'
+FROM HOCVIEN HV JOIN LOP
+ON HV.MALOP = LOP.MALOP
+ORDER BY LOP.SISO DESC
+
+
+-- Câu 25
+-- * Tìm họ tên những LOPTRG thi không đạt quá 3 môn (mỗi môn đều thi không đạt ở tất cả các lần thi)
+SELECT DISTINCT HO + ' ' + TEN AS 'HO TEN'
+FROM HOCVIEN HV JOIN LOP 
+ON HV.MAHV = LOP.TRGLOP
+WHERE HV.MAHV IN (
+	SELECT KQT.MAHV
+	FROM KETQUATHI KQT 
+	GROUP BY KQT.MAHV, KQT.MAMH
+	HAVING NOT EXISTS (SELECT * 
+						FROM KETQUATHI 
+						WHERE KQUA = 'Dat' 
+							AND KQT.MAHV = MAHV 
+							AND KQT.MAMH = MAMH))
+
+
+-- Câu 26
+-- Tìm học viên (mã học viên, họ tên) có số môn đạt điểm 9,10 nhiều nhất
+SELECT HV.MAHV, HV.HO + ' ' + HV.TEN AS 'HO TEN'
+FROM HOCVIEN HV JOIN KETQUATHI KQT
+ON HV.MAHV = KQT.MAHV
+WHERE KQT.DIEM >= 9
+GROUP BY HV.MAHV, HV.HO, HV.TEN
+HAVING COUNT(*) >= ALL (
+	SELECT COUNT(*)
+	FROM HOCVIEN HV JOIN KETQUATHI KQT 
+	ON HV.MAHV = KQT.MAHV
+	WHERE KQT.DIEM >= 9
+	GROUP BY HV.MAHV
+	)
+
+-- cách 2
+SELECT TOP 1 WITH TIES HV.MAHV, HV.HO + ' ' + HV.TEN AS 'HO TEN'
+FROM HOCVIEN HV JOIN KETQUATHI KQT
+ON HV.MAHV = KQT.MAHV
+WHERE KQT.DIEM >= 9
+GROUP BY HV.MAHV, HV.HO, HV.TEN
+ORDER BY COUNT(*) DESC
+
+
+/* Câu 27
+-- Trong từng lớp, tìm học viên (mã học viên, họ tên) có số môn đạt điểm 9,10 Ư nhất.
+SELECT HV.MALOP, HV.MAHV, HV.HO + ' ' + HV.TEN
+FROM HOCVIEN HV JOIN KETQUATHI KQT
+ON HV.MAHV = KQT.MAHV 
+WHERE KQT.DIEM >= 9
+GROUP BY HV.MALOP, HV.MAHV,		
+HAVING COUNT(
+*/
+
+-- Câu 28
+-- 
